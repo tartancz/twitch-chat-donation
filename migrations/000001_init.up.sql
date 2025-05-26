@@ -1,0 +1,9 @@
+CREATE TABLE donation (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user TEXT NOT NULL,
+    channel TEXT NOT NULL,
+    send_from TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
+);

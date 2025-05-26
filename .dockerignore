@@ -1,0 +1,10 @@
+# Ignore Git
+.git/
+.gitignore
+
+# Ignore local config or logs
+.env
+*.log
+
+./bin
+*.db
