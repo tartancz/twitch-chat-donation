@@ -12,12 +12,13 @@ import (
 const JsonFilePath = "./streamers.json"
 
 type Config struct {
-	Env       string
-	LogFolder string
-	LogAll    bool
-	DB        DBConfig
-	Twitch    TwitchConfig
-	Streamers map[string]*StreamerConfig
+	Env               string
+	LogFolder         string
+	LogAll            bool
+	LogUnknownMessage bool
+	DB                DBConfig
+	Twitch            TwitchConfig
+	Streamers         map[string]*StreamerConfig
 }
 
 type DBConfig struct {
@@ -41,9 +42,10 @@ type StreamerConfig struct {
 
 func Load() *Config {
 	return &Config{
-		Env: getEnv("ENV", "development"),
-		LogFolder: getEnv("LOG_FOLDER", "./logs/"),
-		LogAll:    getEnvBool("LOG_ALL", true),
+		Env:               getEnv("ENV", "development"),
+		LogFolder:         getEnv("LOG_FOLDER", "./logs/"),
+		LogAll:            getEnvBool("LOG_ALL", true),
+		LogUnknownMessage: getEnvBool("LOG_UNKNOWN_MESSAGE", true),
 		DB: DBConfig{
 			DSN:          getEnv("DB_DSN", "db.db"),
 			MaxOpenConns: getEnvInt("DB_MAX_OPEN_CONNS", 50),

@@ -32,7 +32,7 @@ func (app *application) LogStreamerMessage(message twitch.Message, streamer *Str
 }
 
 func (app *application) LogUnknownMessage(RawMessage string) {
-	if !app.cfg.LogAll {
+	if !app.cfg.LogUnknownMessage {
 		return
 	}
 	app.CreateLogFolder()
@@ -45,6 +45,22 @@ func (app *application) LogUnknownMessage(RawMessage string) {
 		}
 	}
 	fmt.Fprintln(app.unknowLogFile, RawMessage)
+}
+
+func (app *application) LogAnyMessage(RawMessage string) {
+	if !app.cfg.LogAll {
+		return
+	}
+	app.CreateLogFolder()
+	if app.allLogFile == nil {
+		if file, err := app.CreateLogFile("all"); err != nil {
+			fmt.Fprintf(discord.DefaultServer,"ERROR when creating log file: %s", err)
+			return
+		} else {
+			app.allLogFile = file
+		}
+	}
+	fmt.Fprintln(app.allLogFile, RawMessage)
 
 }
 

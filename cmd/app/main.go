@@ -18,6 +18,7 @@ type application struct {
 	cfg           *config.Config
 	logger        *slog.Logger
 	unknowLogFile *os.File
+	allLogFile    *os.File
 }
 
 func main() {

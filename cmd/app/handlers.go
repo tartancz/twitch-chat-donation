@@ -12,7 +12,7 @@ import (
 const donationLimitNotification = 10_000
 
 func (app *application) HandleAnyMessage(m twitch.Message) {
-	//fmt.Println(m)
+	app.LogAnyMessage(m.GetRaw())
 }
 
 
