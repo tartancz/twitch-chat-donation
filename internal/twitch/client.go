@@ -154,6 +154,9 @@ func (c *Client) authenticate() error {
 	fmt.Fprintf(c, "PASS %s\r\n", c.oauth)
 	fmt.Fprintf(c, "NICK %s\r\n", c.nick)
 
+	// Request capabilities
+	fmt.Fprintf(c, "CAP REQ :twitch.tv/commands twitch.tv/membership\r\n")
+
 	for {
 		line, err := c.reader.ReadString('\n')
 		if err != nil {
