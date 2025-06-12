@@ -3,6 +3,7 @@ package main
 import (
 	"TwitchDonoCalculator/internal/db"
 	"TwitchDonoCalculator/internal/discord"
+	"TwitchDonoCalculator/internal/validator"
 	"bytes"
 	"context"
 	"errors"
@@ -20,48 +21,49 @@ func (app *application) registerDiscordCommands() {
 	})
 }
 
-func (app *application) DiscordGetAllDonationsByStreamer(args discord.DiscordMessageArgs, writer io.Writer) {
+func (app *application) newArgsParser(args discord.DiscordMessageArgs, writer io.Writer) *flag.FlagSet {
 	f := flag.NewFlagSet(args.CommandName, flag.ContinueOnError)
-	f.SetOutput(writer)
+	f.SetOutput(writer) // Suppress output to avoid cluttering the console
+	return f
+}
+
+type DiscordGetAllDonationsByStreamerArgs struct {
+	From time.Time
+	To   time.Time
+	validator.Validator
+}
+
+func (app *application) DiscordGetAllDonationsByStreamer(args discord.DiscordMessageArgs, writer io.Writer) {
+	f := app.newArgsParser(args, writer)
 
 	from := f.String("from", "", "start from date format: YYYY-MM-DD")
 	to := f.String("to", "", "end date format: YYYY-MM-DD")
-	fmt.Println(*from, *to)
+
 	if err := f.Parse(args.Args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return
 		}
 	}
 
+	var argsStruct DiscordGetAllDonationsByStreamerArgs
+
+	validator.HandleDateRange(&argsStruct.Validator, *from, *to, &argsStruct.From, &argsStruct.To)
+
+	if !argsStruct.Valid() {
+		fmt.Fprintln(writer, argsStruct.Error())
+		return
+	}
+
 	var params db.GetSumDonationByStreamerParams
-
-	if *from == "" {
-		params.FromTimestamp = time.Time{}
-	} else {
-		fromTime, err := time.Parse(time.DateOnly, *from)
-		if err != nil {
-			fmt.Fprintf(writer, "Invalid to date format. Use 'YYYY-MM-DD' format.\n")
-			return
-		}
-		params.FromTimestamp = fromTime
-	}
-
-	if *to == "" {
-		params.ToTimestamp = time.Now()
-	} else {
-		toTime, err := time.Parse(time.DateOnly, *to)
-		if err != nil {
-			fmt.Fprintf(writer, "Invalid to date format. Use 'YYYY-MM-DD' format.\n")
-			return
-		}
-		params.ToTimestamp = toTime
-	}
+	params.FromTimestamp = argsStruct.From
+	params.ToTimestamp = argsStruct.To
 
 	res, err := app.db.GetSumDonationByStreamer(context.Background(), params)
 	if err != nil {
 		fmt.Fprintf(writer, "Error getting donations: %v\n", err)
 		return
 	}
+	
 	if len(res) == 0 {
 		fmt.Fprintf(writer, "No donations found.\n")
 		return
@@ -79,5 +81,9 @@ func (app *application) DiscordGetAllDonationsByStreamer(args discord.DiscordMes
 
 	tb.Flush()
 	fmt.Fprintf(writer, "```%s```", buf.String())
+
+}
+
+func (app *application) getLastDonationsFromStreamer(args discord.DiscordMessageArgs, writer io.Writer) {
 
 }
