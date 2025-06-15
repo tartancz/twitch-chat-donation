@@ -45,6 +45,34 @@ func (q *Queries) CreateDonation(ctx context.Context, arg CreateDonationParams) 
 	return i, err
 }
 
+const getAllStreamers = `-- name: GetAllStreamers :many
+SELECT DISTINCT d.channel
+FROM donation d
+`
+
+func (q *Queries) GetAllStreamers(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getAllStreamers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var channel string
+		if err := rows.Scan(&channel); err != nil {
+			return nil, err
+		}
+		items = append(items, channel)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSumDonationByStreamer = `-- name: GetSumDonationByStreamer :many
 SELECT
     CAST(COALESCE(SUM(d.amount), 0) AS INTEGER) AS amount,
@@ -82,6 +110,94 @@ func (q *Queries) GetSumDonationByStreamer(ctx context.Context, arg GetSumDonati
 			&i.Startingdate,
 			&i.Endingdate,
 			&i.Channel,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getLastDonations = `-- name: getLastDonations :many
+SELECT d.id, d.user, d.channel, d.send_from, d.amount, d.text, d.timestamp
+FROM donation d
+ORDER BY d.timestamp DESC
+LIMIT ?2 OFFSET ?1
+`
+
+type getLastDonationsParams struct {
+	Offset int64
+	Limit  int64
+}
+
+func (q *Queries) getLastDonations(ctx context.Context, arg getLastDonationsParams) ([]Donation, error) {
+	rows, err := q.db.QueryContext(ctx, getLastDonations, arg.Offset, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Donation
+	for rows.Next() {
+		var i Donation
+		if err := rows.Scan(
+			&i.ID,
+			&i.User,
+			&i.Channel,
+			&i.SendFrom,
+			&i.Amount,
+			&i.Text,
+			&i.Timestamp,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getLastDonationsByStreamer = `-- name: getLastDonationsByStreamer :many
+SELECT d.id, d.user, d.channel, d.send_from, d.amount, d.text, d.timestamp
+FROM donation d
+WHERE d.channel = ?1
+ORDER BY d.timestamp DESC
+LIMIT ?3 OFFSET ?2
+`
+
+type getLastDonationsByStreamerParams struct {
+	Channel string
+	Offset  int64
+	Limit   int64
+}
+
+func (q *Queries) getLastDonationsByStreamer(ctx context.Context, arg getLastDonationsByStreamerParams) ([]Donation, error) {
+	rows, err := q.db.QueryContext(ctx, getLastDonationsByStreamer, arg.Channel, arg.Offset, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Donation
+	for rows.Next() {
+		var i Donation
+		if err := rows.Scan(
+			&i.ID,
+			&i.User,
+			&i.Channel,
+			&i.SendFrom,
+			&i.Amount,
+			&i.Text,
+			&i.Timestamp,
 		); err != nil {
 			return nil, err
 		}

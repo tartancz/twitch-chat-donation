@@ -12,3 +12,21 @@ SELECT
 FROM donation d 
 WHERE d."timestamp" BETWEEN ? AND ?
 GROUP BY d.channel;
+
+-- name: GetAllStreamers :many
+SELECT DISTINCT d.channel
+FROM donation d;
+
+-- name: getLastDonationsByStreamer :many
+SELECT d.*
+FROM donation d
+WHERE d.channel = :channel
+ORDER BY d.timestamp DESC
+LIMIT :limit OFFSET :offset;
+
+-- name: getLastDonations :many
+SELECT d.*
+FROM donation d
+ORDER BY d.timestamp DESC
+LIMIT :limit OFFSET :offset;
+

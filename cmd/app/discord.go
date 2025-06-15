@@ -27,12 +27,6 @@ func (app *application) newArgsParser(args discord.DiscordMessageArgs, writer io
 	return f
 }
 
-type DiscordGetAllDonationsByStreamerArgs struct {
-	From time.Time
-	To   time.Time
-	validator.Validator
-}
-
 func (app *application) DiscordGetAllDonationsByStreamer(args discord.DiscordMessageArgs, writer io.Writer) {
 	f := app.newArgsParser(args, writer)
 
@@ -40,12 +34,17 @@ func (app *application) DiscordGetAllDonationsByStreamer(args discord.DiscordMes
 	to := f.String("to", "", "end date format: YYYY-MM-DD")
 
 	if err := f.Parse(args.Args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return
+		if !errors.Is(err, flag.ErrHelp) {
+			fmt.Fprintf(writer, "Error parsing arguments: %v\n", err)
 		}
+		return
 	}
 
-	var argsStruct DiscordGetAllDonationsByStreamerArgs
+	var argsStruct struct {
+		From time.Time
+		To   time.Time
+		validator.Validator
+	}
 
 	validator.HandleDateRange(&argsStruct.Validator, *from, *to, &argsStruct.From, &argsStruct.To)
 
@@ -63,7 +62,7 @@ func (app *application) DiscordGetAllDonationsByStreamer(args discord.DiscordMes
 		fmt.Fprintf(writer, "Error getting donations: %v\n", err)
 		return
 	}
-	
+
 	if len(res) == 0 {
 		fmt.Fprintf(writer, "No donations found.\n")
 		return
@@ -85,5 +84,48 @@ func (app *application) DiscordGetAllDonationsByStreamer(args discord.DiscordMes
 }
 
 func (app *application) getLastDonationsFromStreamer(args discord.DiscordMessageArgs, writer io.Writer) {
+	f := app.newArgsParser(args, writer)
 
+	var argsStruct struct {
+		From     time.Time
+		To       time.Time
+		Streamer string
+		validator.Validator
+	}
+
+	from := f.String("from", "", "start from date format: YYYY-MM-DD")
+	to := f.String("to", "", "end date format: YYYY-MM-DD")
+	f.StringVar(&argsStruct.Streamer, "streamer", "", "Streamer name, if not empty, will use all streamers")
+
+	if err := f.Parse(args.Args); err != nil {
+		if !errors.Is(err, flag.ErrHelp) {
+			fmt.Fprintf(writer, "Error parsing arguments: %v\n", err)
+		}
+		return
+	}
+
+	validator.HandleDateRange(&argsStruct.Validator, *from, *to, &argsStruct.From, &argsStruct.To)
+
+	if !argsStruct.Valid() {
+		fmt.Fprintln(writer, argsStruct.Error())
+		return
+	}
+
+	res, err := app.db.GetLastDonationsByStreamer(context.Background(), db.ArgsGetLastDonationsByStreamer{
+		Streamer: argsStruct.Streamer,
+		From:     argsStruct.From,
+		To:       argsStruct.To,
+	})
+	if err != nil {
+		fmt.Fprintf(writer, "Error getting donations: %v\n", err)
+		return
+	}
+	if len(res) == 0 {
+		fmt.Fprintf(writer, "No donations found for streamer %s.\n", argsStruct.Streamer)
+		return
+	}
+
+	db.MakeTable()
+	
 }
+
